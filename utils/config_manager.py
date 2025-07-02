@@ -2,7 +2,6 @@
 
 from PyQt5.QtCore import QSettings
 
-
 class ConfigManager:
     def __init__(self, filename="config.ini"):
         self.settings = QSettings(filename, QSettings.IniFormat)

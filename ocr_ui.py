@@ -1,16 +1,18 @@
 from PyQt5.QtWidgets import QTableWidget, QLabel
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QComboBox, QGroupBox, QRadioButton, \
     QCheckBox, QWidget, QSizePolicy, QTextEdit
+from PyQt5.QtGui import QIcon
 from utils.thumbnail_viewer import ThumbnailViewer
 from image_models.image_viewer import ImageViewer
 from utils.logs import LogBox
+from utils.table_operations import TableOperationsMixin
+from utils.logo import get_logo_pixmap
 
-
-class OCRUi(QWidget):
+class OCRUi(QWidget, TableOperationsMixin):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("影文OCR")
-        # self.setWindowIcon(QIcon('path/to/logo.png'))  # 设置窗口图标，暂时注释
+        self.setWindowIcon(QIcon(get_logo_pixmap()))  # 设置窗口图标，暂时注释
         self.initUI()
 
     def initUI(self):
@@ -21,7 +23,9 @@ class OCRUi(QWidget):
 
         # 文件选择按钮
         self.btn_select_file = QPushButton('选择文件')
+        self.shot_screen_btn = QPushButton('截图')
         left_layout.addWidget(self.btn_select_file)
+        left_layout.addWidget(self.shot_screen_btn)
 
         # API Token 输入框
         self.api_token_input = QLineEdit(self)
@@ -30,7 +34,7 @@ class OCRUi(QWidget):
 
         # Email 输入框
         self.email_input = QLineEdit(self)
-        left_layout.addWidget(QLabel('Email:'))
+        left_layout.addWidget(QLabel('登录账号(必填):'))
         left_layout.addWidget(self.email_input)
 
         # 修改后的文字排版方向下拉菜单
@@ -69,6 +73,7 @@ class OCRUi(QWidget):
 
         # 日志框
         self.log_box = LogBox()
+        self.log_box.log("欢迎使用影文OCR\napi申请请前往看典古籍:https://www.kandianguji.com/\n仓库地址(复刻):https://github.com/WeeZHnMin/YingWenOCR-fork.git")
         left_layout.addWidget(QLabel('运行日志'))
         left_layout.addWidget(self.log_box)
         # 中间布局：图片展示区
@@ -80,15 +85,17 @@ class OCRUi(QWidget):
         # 右侧布局：OCR内容展示区
         right_layout = QVBoxLayout()
         self.ocr_result_textbox = QTextEdit()
-        self.ocr_result_textbox.setReadOnly(True)
         right_layout.addWidget(QLabel('OCR内容'))
         right_layout.addWidget(self.ocr_result_textbox)
+        self.save_excel_btn = QPushButton('保存为Excel')
+        right_layout.addWidget(self.save_excel_btn)
 
         # 表格
         self.ocr_table = QTableWidget(self)
         self.ocr_table.setColumnCount(3)
         self.ocr_table.setHorizontalHeaderLabels(['图像', 'OCR内容', '置信度'])
         right_layout.addWidget(self.ocr_table)
+        self.setup_table_context_menu(self.ocr_table)
 
         # 创建 ThumbnailViewer 实例并添加到布局中
         self.thumbnail_viewer = ThumbnailViewer()

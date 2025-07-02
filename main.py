@@ -1,16 +1,17 @@
 import sys
-
 from PyQt5.QtCore import QByteArray, QBuffer, QIODevice
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QFileDialog, QTableWidgetItem
 
+import time
 from utils.config_manager import ConfigManager
 from ocr_ui import OCRUi
 from utils.thumbnail_viewer import ThumbnailViewer
 from utils.image_processing_thread import ImageProcessingThread  # 导入新的图像处理线程
 from utils.ocr_display import OCRDisplay
 from utils.ocr_thread import OCRThread
-
+from utils.excel_woker import SaveExcelWorker
+from utils.shot_screen import take_area_screenshot
 
 class OCRApp(OCRUi):
     def __init__(self):
@@ -20,7 +21,52 @@ class OCRApp(OCRUi):
         self.btn_select_file.clicked.connect(self.openFileNameDialog)
         self.btn_execute.clicked.connect(self.executeOCR)
         self.ocr_display = OCRDisplay(self.ocr_result_textbox)
+        self.save_excel_btn.clicked.connect(self.saveTableToExcel)  
+        self.shot_screen_btn.clicked.connect(self.getScreenShot)
         self.loadSettings()
+
+    def getScreenShot(self):
+        """截图功能实现"""
+        self.hide()  # ✅ 隐藏整个窗口
+        time.sleep(0.1)
+        try:
+            # 进行区域截图
+            screenshot_pixmap, img_path = take_area_screenshot("images")
+            if screenshot_pixmap and not screenshot_pixmap.isNull() and img_path:
+                self.image_path = img_path  # 保存截图路径
+                # 截图成功，加载到图像查看器
+                self.image_viewer.loadImage(screenshot_pixmap)
+                # print("截图完成并已加载到图像查看器")
+                return True
+            else:
+                # print("截图被取消或失败")
+                return False  
+        except Exception as e:
+            # print(f"截图过程中发生错误: {str(e)}")
+            return False
+        
+        finally:
+            self.show()  # ✅ 截图完成后重新显示窗口
+    
+    def saveTableToExcel(self):
+        row_count = self.ocr_table.rowCount()
+        if not row_count:
+            return
+        
+        # 收集数据
+        table_data = []
+        for row in range(row_count):
+            thumbnail_viewer = self.ocr_table.cellWidget(row, 0)
+            character = self.ocr_table.item(row, 1).text()
+            confidence = self.ocr_table.item(row, 2).text()
+            table_data.append((thumbnail_viewer, character, confidence))
+        
+        # 创建并启动工作线程
+        self.worker = SaveExcelWorker(table_data)
+        self.worker.finished.connect(lambda: print("Excel保存完成"))
+        self.worker.error.connect(lambda err: print(f"保存失败: {err}"))
+        self.worker.start()
+
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
